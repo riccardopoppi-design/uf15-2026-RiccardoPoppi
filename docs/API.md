@@ -550,7 +550,7 @@ Viene impostato il campo `isActive` a `false` senza eliminare fisicamente il rec
 Riattivazione di un utente disattivato.
 Viene impostato il campo `isActive` a `true`.
 
-* **Endpoint:** `PATCH /users/:id/deactivate`
+* **Endpoint:** `PATCH /users/:id/activate`
     * **Parametro:** `id` (ID dell'utente da attivare)
 
 * **Risposta (200):**

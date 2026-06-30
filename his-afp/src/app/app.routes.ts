@@ -2,6 +2,10 @@ import { Routes } from '@angular/router';
 
 export const routes: Routes = [
   {
+    path: 'gestione-personale',
+    loadComponent: () => import('./features/gestione-personale/gestione-personale').then(m => m.GestionePersonaleComponent)
+  },
+  {
     path: 'lista-pz',
     loadComponent: () => import('./features/lista-pz/lista-pz').then((m) => m.ListaPz),
   },

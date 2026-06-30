@@ -1,0 +1,82 @@
+<div class="p-6 max-w-7xl mx-auto">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-slate-800">Gestione Personale Operativo</h1>
+    <p-button (onClick)="openNewDialog()" label="Aggiungi Collaboratore" icon="pi pi-plus" />
+  </div>
+
+  <p-table [value]="staffList()" [loading]="isLoading()" [rows]="10" paginator="true" responsiveLayout="scroll" class="w-full shadow rounded-lg overflow-hidden">
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Username</th>
+        <th>Ruolo</th>
+        <th>Stato Account</th>
+        <th class="w-24 text-center">Azioni</th>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="body" let-user>
+      <tr>
+        <td>{{ user.username }}</td>
+        <td>
+          <span class="px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700">
+            {{ user.role }}
+          </span>
+        </td>
+        <td>
+          @if (user.isActive) {
+            <span class="text-green-600 font-medium flex items-center gap-1">🟢 Attivo</span>
+          } @else {
+            <span class="text-red-500 font-medium flex items-center gap-1">🔴 Disattivato</span>
+          }
+        </td>
+        <td class="text-center">
+          <p-button icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" (onClick)="openEditDialog(user)" />
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+
+  <p-dialog [header]="isEditMode() ? 'Modifica Ruolo Operatore' : 'Nuovo Operatore'" [(visible)]="isDialogVisible" [modal]="true" [style]="{ width: '450px' }" class="p-fluid">
+    <form [formGroup]="staffForm" (ngSubmit)="saveStaff()" class="flex flex-col gap-4 mt-2">
+      
+      <div class="flex flex-col gap-1">
+        <label for="username" class="font-semibold text-sm text-slate-700">Username</label>
+        <input pInputText id="username" formControlName="username" placeholder="Inserisci username" />
+        
+        @if (staffForm.get('username')?.pending) {
+          <small class="text-blue-500 flex items-center gap-1"><i class="pi pi-spin pi-spinner"></i> Verifica disponibilità...</small>
+        }
+        @if (staffForm.get('username')?.invalid && staffForm.get('username')?.touched) {
+          @if (staffForm.get('username')?.errors?.['required']) {
+            <p-message severity="error" text="Lo username è obbligatorio." />
+          }
+          @if (staffForm.get('username')?.errors?.['usernameTaken']) {
+            <p-message severity="error" text="Errore di sicurezza: Questo username è già in uso!" />
+          }
+        }
+      </div>
+
+      @if (!isEditMode()) {
+        <div class="flex flex-col gap-1">
+          <label for="password" class="font-semibold text-sm text-slate-700">Password</label>
+          <p-password id="password" formControlName="password" [feedback]="false" toggleMask="true" placeholder="Imposta password" />
+          @if (staffForm.get('password')?.invalid && staffForm.get('password')?.touched) {
+            <p-message severity="error" text="La password deve contenere almeno 4 caratteri." />
+          }
+        </div>
+      }
+
+      <div class="flex flex-col gap-1">
+        <label for="role" class="font-semibold text-sm text-slate-700">Ruolo Operativo</label>
+        <p-select id="role" formControlName="role" [options]="roles" optionLabel="label" optionValue="value" placeholder="Seleziona un ruolo" />
+        @if (staffForm.get('role')?.invalid && staffForm.get('role')?.touched) {
+          <p-message severity="error" text="Selezionare un ruolo valido." />
+        }
+      </div>
+
+      <div class="flex justify-end gap-2 mt-4">
+        <p-button label="Annulla" severity="secondary" [text]="true" (onClick)="isDialogVisible.set(false)" type="button" />
+        <p-button label="Salva" icon="pi pi-check" [disabled]="staffForm.invalid || staffForm.pending" type="submit" />
+      </div>
+    </form>
+  </p-dialog>
+</div>

@@ -17,8 +17,8 @@ services:
   backend:
     build: ./backend
     container_name: sio-backend
-    #    ports:
-    #      - "3000:3000"
+    ports:
+      - "3000:3000"
     environment:
       DB_HOST: db
       DB_USER: sio_user

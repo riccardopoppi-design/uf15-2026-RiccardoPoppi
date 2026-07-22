@@ -287,36 +287,46 @@ export const updatePatientInformationFn = catchAsync(async (req, res, next) => {
 
 // GET /patients/search - Ricerca avanzata (Fuzzy)
 export const searchPatientsFn = catchAsync(async (req, res) => {
-	const {cf, nome, cognome, data_nascita} = req.query;
-	let query = `SELECT *
-                 FROM patients`;
+	const { cf, nome, cognome, data_nascita } = req.query;
+	let query = `SELECT * FROM patients`;
 	const params = [];
+	const clauses = [];
+
 	logger.info(`Ricerca pazienti con parametri: cf=${cf}, nome=${nome}, cognome=${cognome}, data_nascita=${data_nascita}`);
 
 	if (!cf && !nome && !cognome && !data_nascita) {
-		return res.status(400).json({status: 'fail', message: "Almeno un parametro di ricerca è richiesto"});
-	}
-
-	if (cf && (nome || cognome || data_nascita)) {
-		logger.warn("Ricerca con codice fiscale e altri parametri. Il codice fiscale sovrascriverà gli altri filtri.");
+		return res.status(400).json({ status: 'fail', message: "Almeno un parametro di ricerca è richiesto" });
 	}
 
 	if (cf) {
-		query += ` WHERE codice_fiscale = $${params.length + 1}`;
-		params.push(cf.toUpperCase());
+		// codice fiscale = ricerca esatta
+		clauses.push(`codice_fiscale = $${params.length + 1}`);
+		params.push(String(cf).toUpperCase());
 	} else {
-		if (!nome || !cognome || !data_nascita) {
-			return res.status(400).json({
-				status: 'fail',
-				message: "Senza codice fiscale, nome, cognome e data di nascita sono obbligatori."
-			});
+		// costruisco clausole dinamiche per nome/cognome/data
+		if (nome) {
+			clauses.push(`nome ILIKE $${params.length + 1}`);
+			params.push(`%${String(nome)}%`);
 		}
-		query += ` WHERE nome ILIKE $${params.length + 1} AND cognome ILIKE $${params.length + 2} AND data_nascita = $${params.length + 3}`;
-		params.push(nome.toUpperCase(), cognome.toUpperCase(), data_nascita);
+		if (cognome) {
+			clauses.push(`cognome ILIKE $${params.length + 1}`);
+			params.push(`%${String(cognome)}%`);
+		}
+		if (data_nascita) {
+			clauses.push(`data_nascita = $${params.length + 1}`);
+			params.push(String(data_nascita));
+		}
+		if (clauses.length === 0) {
+			return res.status(400).json({ status: 'fail', message: "Specificare almeno nome o cognome o data di nascita." });
+		}
+	}
+
+	if (clauses.length > 0) {
+		query += ' WHERE ' + clauses.join(' AND ');
 	}
 
 	logger.info(`Esecuzione query di ricerca pazienti: ${query} con parametri ${JSON.stringify(params)}`);
 
 	const result = await pool.query(query, params);
-	res.status(200).json({status: 'success', results: result.rowCount, data: result.rows});
+	res.status(200).json({ status: 'success', results: result.rowCount, data: result.rows });
 });

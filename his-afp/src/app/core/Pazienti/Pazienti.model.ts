@@ -60,3 +60,10 @@ export interface PatientAdmissionRes {
   id: number;
   braccialetto: string;
 }
+
+export interface PatientSearchQuery {
+  cf?: string;
+  nome?: string;
+  cognome?: string;
+  dataNascita?: string;
+}

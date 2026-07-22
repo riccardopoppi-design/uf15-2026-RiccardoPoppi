@@ -1,5 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { PatientAdmission, PatientAdmissionRes, Paziente, PazienteDTO } from './Pazienti.model';
+import { Observable } from 'rxjs';
+import { PatientAdmission, PatientAdmissionRes, Paziente, PazienteDTO, PatientSearchQuery } from './Pazienti.model';
 import { HttpClient } from '@angular/common/http';
 import { APIResponse } from '../models/APIResponse.model';
 import { environment } from '../../../environments/environment';
@@ -70,6 +71,18 @@ export class PatientManager {
           console.error("Errore durante l'aggiornamento delle informazioni del paziente:", err);
         },
       });
+  }
+
+  public searchPatient(query: PatientSearchQuery): Observable<APIResponse<PazienteDTO[]>> {
+    const params: Record<string, string> = {};
+    if (query['cf']) params['cf'] = query['cf'] as string;
+    if (query['nome']) params['nome'] = query['nome'] as string;
+    if (query['cognome']) params['cognome'] = query['cognome'] as string;
+    if (query['dataNascita']) params['data_nascita'] = query['dataNascita'] as string;
+
+    return this.#http.get<APIResponse<PazienteDTO[]>>(`${environment.apiUrl}/patients/search`, {
+      params,
+    });
   }
 
   public mapPazienteDTOToPaziente(pz: PazienteDTO): Paziente {

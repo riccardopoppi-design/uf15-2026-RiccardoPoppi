@@ -1,16 +1,31 @@
-<form (submit)="onSubmit()" [formGroup]="paziente">
-  <div class="flex flex-row flex-wrap gap-8">
-    <p-fieldset formGroupName="anagrafica" legend="Dati anagrafici">
-      <div class="flex flex-col p-4">
-        <label for="nome">Nome:</label>
-        <input
-          [invalid]="checkFormControl('anagrafica.nome')"
-          class="w-2xs"
-          formControlName="nome"
-          id="nome"
-          pInputText
-          type="text"
-        />
+<div class="flex flex-col gap-6">
+  <his-patient-search
+    (patientSelected)="onPatientSelected($event)"
+    (newPatient)="openNewPatientForm()"
+  ></his-patient-search>
+
+  <div *ngIf="showForm()" class="flex flex-col gap-4">
+    <div class="flex flex-row items-center justify-between gap-4 p-4 bg-white border border-slate-200 rounded-lg shadow-sm">
+      <div>
+        <h2 class="text-lg font-semibold">Modulo accettazione paziente</h2>
+        <p class="text-sm text-slate-600">Compila i dati e invia l'accesso.</p>
+      </div>
+      <p-button label="Modifica dati" severity="secondary" (onClick)="openNewPatientForm()"></p-button>
+    </div>
+
+    <form (submit)="onSubmit()" [formGroup]="paziente" class="grid grid-cols-1 gap-8">
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        <p-fieldset formGroupName="anagrafica" legend="Dati anagrafici">
+          <div class="flex flex-col p-4">
+            <label for="nome">Nome:</label>
+            <input
+              [invalid]="checkFormControl('anagrafica.nome')"
+              class="w-2xs"
+              formControlName="nome"
+              id="nome"
+              pInputText
+              type="text"
+            />
         @if (checkFormControl('anagrafica.nome')) {
           @if (checkFormControlError('anagrafica.nome', 'required')) {
             <p-message severity="error" variant="simple">
@@ -243,6 +258,48 @@
         }
       </div>
     </p-fieldset>
+    <p-fieldset formGroupName="residenza" legend="Dati di residenza">
+      <div class="flex flex-col p-4">
+        <label for="via">Via:</label>
+        <input
+          class="w-2xs"
+          formControlName="via"
+          id="via"
+          pInputText
+          type="text"
+        />
+      </div>
+      <div class="flex flex-col p-4">
+        <label for="civico">Civico:</label>
+        <input
+          class="w-2xs"
+          formControlName="civico"
+          id="civico"
+          pInputText
+          type="text"
+        />
+      </div>
+      <div class="flex flex-col p-4">
+        <label for="comune">Comune:</label>
+        <input
+          class="w-2xs"
+          formControlName="comune"
+          id="comune"
+          pInputText
+          type="text"
+        />
+      </div>
+      <div class="flex flex-col p-4">
+        <label for="provincia">Provincia:</label>
+        <input
+          class="w-2xs"
+          formControlName="provincia"
+          id="provincia"
+          pInputText
+          type="text"
+        />
+      </div>
+    </p-fieldset>
   </div>
   <div class="flex flex-row gap-4 pt-3">
     <p-button
@@ -257,3 +314,5 @@
     />
   </div>
 </form>
+  </div>
+</div>

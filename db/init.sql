@@ -136,9 +136,9 @@ ON CONFLICT (code) DO NOTHING;
 
 -- Utenti
 INSERT INTO users (username, password, role)
-VALUES ('medico', crypt('1234', gen_salt('bf', 10)), 'DOC'),
-       ('infermiere', crypt('1234', gen_salt('bf', 10)), 'INF'),
-       ('amministrativo', crypt('1234', gen_salt('bf', 10)), 'AMM')
+VALUES ('utente1', crypt('1234', gen_salt('bf', 10)), 'DOC'),
+       ('utente2', crypt('1234', gen_salt('bf', 10)), 'INF'),
+       ('utente3', crypt('1234', gen_salt('bf', 10)), 'AMM')
 ON CONFLICT (username) DO NOTHING;
 
 -- Paziente Demo

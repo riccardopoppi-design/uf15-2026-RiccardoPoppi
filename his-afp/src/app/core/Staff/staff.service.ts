@@ -9,7 +9,7 @@ import { StaffUser, NewStaffPayload } from './staff.model';
 })
 export class StaffService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/api/staff'; // O l'URL mappato dal proxy gateway
+  private readonly baseUrl = '/api/users';
 
   // Recupera l'elenco dello staff
   getAllStaff(): Observable<APIResponse<StaffUser[]>> {
@@ -18,7 +18,7 @@ export class StaffService {
 
   // Verifica disponibilità dello username per AsyncValidator
   checkUsernameAvailable(username: string): Observable<boolean> {
-    return this.http.get<APIResponse<{ available: boolean }>>(`${this.baseUrl}/check-username/${username}`)
+    return this.http.get<APIResponse<{ available: boolean }>>(`${this.baseUrl}/check/${username}`)
       .pipe(
         map(res => !!res.data?.available)
       );
@@ -29,8 +29,13 @@ export class StaffService {
     return this.http.post<APIResponse<StaffUser>>(this.baseUrl, payload);
   }
 
-  // Modifica ruolo operatore (PATCH /staff/:id)
+  // Elimina un operatore
+  deleteStaff(id: number): Observable<APIResponse<null>> {
+    return this.http.delete<APIResponse<null>>(`${this.baseUrl}/${id}`);
+  }
+
+  // Modifica ruolo operatore (PATCH /users/:id/editrole)
   updateStaffRole(id: number, role: string): Observable<APIResponse<StaffUser>> {
-    return this.http.patch<APIResponse<StaffUser>>(`${this.baseUrl}/${id}/role`, { role });
+    return this.http.patch<APIResponse<StaffUser>>(`${this.baseUrl}/${id}/editrole`, { role });
   }
 }

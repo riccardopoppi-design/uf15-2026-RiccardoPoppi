@@ -22,6 +22,6 @@ export class Header {
    * vx.y.z P
    */
 
-  type = (window as any).env?.type;
-  version = (window as any).env?.version;
+  type = window.env?.type;
+  version = window.env?.version;
 }

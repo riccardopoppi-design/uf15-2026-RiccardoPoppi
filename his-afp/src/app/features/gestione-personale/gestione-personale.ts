@@ -41,7 +41,7 @@ export class GestionePersonaleComponent implements OnInit {
   selectedUserId = signal<number | null>(null);
 
   roles = [
-    { label: 'Medico', value: 'MED' },
+    { label: 'Medico', value: 'DOC' },
     { label: 'Infermiere', value: 'INF' },
     { label: 'Amministrativo', value: 'AMM' }
   ];
@@ -81,7 +81,10 @@ export class GestionePersonaleComponent implements OnInit {
     
     // Ripristina i validatori per la creazione (password obbligatoria)
     this.staffForm.get('password')?.setValidators([Validators.required, Validators.minLength(4)]);
+    this.staffForm.get('password')?.updateValueAndValidity();
     this.staffForm.get('username')?.enable();
+    this.staffForm.get('username')?.updateValueAndValidity();
+    this.staffForm.get('role')?.updateValueAndValidity();
     
     this.isDialogVisible.set(true);
   }
@@ -93,11 +96,12 @@ export class GestionePersonaleComponent implements OnInit {
     this.selectedUserId.set(user.id);
     this.staffForm.reset();
     
-// Sostituisci le righe dentro openEditDialog con questa sintassi sicura:
-this.staffForm.get('username')?.setValue(user.username);
-this.staffForm.get('username')?.disable();
-this.staffForm.get('password')?.clearValidators();
-this.staffForm.get('role')?.setValue(user.role); // <-- Aggiunto il punto di domanda
+    this.staffForm.get('username')?.setValue(user.username);
+    this.staffForm.get('username')?.disable();
+    this.staffForm.get('password')?.clearValidators();
+    this.staffForm.get('password')?.updateValueAndValidity();
+    this.staffForm.get('role')?.setValue(user.role);
+    this.staffForm.get('role')?.updateValueAndValidity();
     
     this.isDialogVisible.set(true);
   }
@@ -126,5 +130,16 @@ this.staffForm.get('role')?.setValue(user.role); // <-- Aggiunto il punto di dom
         this.isDialogVisible.set(false);
       });
     }
+  }
+
+  deleteStaff(user: StaffUser): void {
+    if (!user.id) return;
+
+    const confirmed = window.confirm(`Eliminare l'utente ${user.username}?`);
+    if (!confirmed) return;
+
+    this.staffService.deleteStaff(user.id).subscribe(() => {
+      this.loadStaff();
+    });
   }
 }

@@ -13,6 +13,8 @@ import { Textarea } from 'primeng/textarea';
 import { GestioneRisorse } from '../../core/Risorse/gestione-risorse';
 import { formatDate } from '@angular/common';
 import { PatientManager } from '../../core/Pazienti/patient-manager';
+import { environment } from '../../../environments/environment';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'his-modifica-pz',
@@ -35,8 +37,9 @@ export class ModificaPz {
   patientId = input<string>();
   gestioneRisorse = inject(GestioneRisorse);
   patientManager = inject(PatientManager);
+  readonly #router = inject(Router);
   patientReq = httpResource<APIResponse<PazienteDTO>>(
-    () => `http://localhost:3000/admissions/${this.patientId()}`,
+    () => `${environment.apiUrl}/admissions/${this.patientId()}`,
   );
   readonly maxDate = new Date();
   readonly sexOption = [
@@ -135,12 +138,61 @@ export class ModificaPz {
   onSubmit() {
     if (this.paziente.valid) {
       console.log(this.paziente.value);
+      const admission = this.patientReq.hasValue() ? this.patientReq.value().data : null;
+      const patientId = admission ? admission.patientId : undefined;
+      if (!patientId) {
+        console.error('Impossibile determinare patientId per l\'aggiornamento della residenza');
+        return;
+      }
       this.patientManager.updatePatientInfo(
-        Number(this.patientId()) || -1,
-        this.paziente.value.residenza as Pick<PatientAdmission, 'residenza'>,
+        Number(patientId) || -1,
+        this.paziente.value.residenza as PatientAdmission['residenza'],
+        () => {
+          // Al successo chiudo/navigo verso la lista e mostro un messaggio
+          this.#router.navigate(['/lista-pz']);
+        },
       );
     } else {
       this.paziente.markAllAsTouched();
     }
+  }
+
+  onDeleteAdmission() {
+    const admissionId = Number(this.patientId());
+
+    if (!Number.isInteger(admissionId) || admissionId <= 0) {
+      console.error('Impossibile determinare admissionId per la cancellazione accesso');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Confermi l'eliminazione del solo accesso corrente?",
+    );
+
+    if (!confirmed) return;
+
+    this.patientManager.deleteAdmission(admissionId, () => {
+      this.#router.navigate(['/lista-pz']);
+    });
+  }
+
+  onDeletePatient() {
+    const admission = this.patientReq.hasValue() ? this.patientReq.value().data : null;
+    const patientId = admission ? admission.patientId : undefined;
+
+    if (!patientId) {
+      console.error('Impossibile determinare patientId per la cancellazione');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'Confermi l\'eliminazione del paziente? Verranno eliminati anche gli accessi collegati.',
+    );
+
+    if (!confirmed) return;
+
+    this.patientManager.deletePatient(Number(patientId) || -1, () => {
+      this.#router.navigate(['/lista-pz']);
+    });
   }
 }

@@ -11,6 +11,7 @@ export interface Paziente {
 
 export interface PazienteDTO {
   id: number;
+  patientId?: number;
   braccialetto: string;
   dataOraIngresso: string;
   stato: string;

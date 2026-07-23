@@ -47,28 +47,82 @@ export class PatientManager {
     });
   }
 
-  public admitPatient(pz: PatientAdmission) {
+  public admitPatient(
+    pz: PatientAdmission,
+    onSuccess?: () => void,
+    onError?: (errorMessage: string) => void,
+  ) {
     this.#http
       .post<APIResponse<PatientAdmissionRes>>(`${environment.apiUrl}/admissions`, pz)
       .subscribe({
         next: (res) => {
-          this.#router.navigate([`/modifica-pz/${res.data.id}`]);
+          if (onSuccess) {
+            try {
+              onSuccess();
+            } catch (e) {
+              console.error('onSuccess callback error', e);
+            }
+          }
         },
         error: (err) => {
           console.error("Errore durante l'ammissione del paziente:", err);
+          if (onError) {
+            const message = err?.error?.message ?? "Errore durante l'ammissione del paziente.";
+            onError(message);
+          }
         },
       });
   }
 
-  public updatePatientInfo(pzId: number, residenza: Pick<PatientAdmission, 'residenza'>) {
+  public updatePatientInfo(patientOrAdmissionId: number, residenza: PatientAdmission['residenza'], onSuccess?: () => void) {
     this.#http
-      .patch<APIResponse<PatientAdmissionRes>>(`${environment.apiUrl}/patients/${pzId}`, residenza)
+      .patch<APIResponse<PatientAdmissionRes>>(`${environment.apiUrl}/patients/${patientOrAdmissionId}`, residenza)
       .subscribe({
         next: (res) => {
-          this.#router.navigate([`/lista-pz`]);
+          if (onSuccess) {
+            onSuccess();
+          } else {
+            this.#router.navigate([`/lista-pz`]);
+          }
         },
         error: (err) => {
           console.error("Errore durante l'aggiornamento delle informazioni del paziente:", err);
+        },
+      });
+  }
+
+  public deletePatient(patientOrAdmissionId: number, onSuccess?: () => void) {
+    this.#http.delete<APIResponse<{ patient: { id: number; nome: string; cognome: string }; deletedAdmissions: number }>>(
+      `${environment.apiUrl}/patients/${patientOrAdmissionId}`,
+    ).subscribe({
+      next: () => {
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          this.#router.navigate([`/lista-pz`]);
+        }
+      },
+      error: (err) => {
+        console.error('Errore durante la cancellazione del paziente:', err);
+      },
+    });
+  }
+
+  public deleteAdmission(admissionId: number, onSuccess?: () => void) {
+    this.#http
+      .delete<APIResponse<{ id: number; patientId: number; braccialetto: string }>>(
+        `${environment.apiUrl}/admissions/${admissionId}`,
+      )
+      .subscribe({
+        next: () => {
+          if (onSuccess) {
+            onSuccess();
+          } else {
+            this.#router.navigate([`/lista-pz`]);
+          }
+        },
+        error: (err) => {
+          console.error("Errore durante l'eliminazione dell'accesso:", err);
         },
       });
   }

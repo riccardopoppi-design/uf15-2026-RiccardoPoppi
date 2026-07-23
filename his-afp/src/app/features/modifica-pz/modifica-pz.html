@@ -1,4 +1,4 @@
-<form (submit)="onSubmit()" [formGroup]="paziente">
+<form (ngSubmit)="onSubmit()" [formGroup]="paziente">
   <div class="flex flex-row flex-wrap gap-8">
     <p-fieldset formGroupName="anagrafica" legend="Dati anagrafici">
       <div class="flex flex-col p-4">
@@ -330,9 +330,24 @@
       type="submit"
     />
     <p-button
+      type="button"
       (onClick)="paziente.get('residenza')?.reset()"
       label="Reset"
       severity="warn"
+      variant="outlined"
+    />
+    <p-button
+      type="button"
+      (onClick)="onDeleteAdmission()"
+      label="Elimina accesso"
+      severity="danger"
+      variant="outlined"
+    />
+    <p-button
+      type="button"
+      (onClick)="onDeletePatient()"
+      label="Elimina anagrafica"
+      severity="danger"
       variant="outlined"
     />
   </div>

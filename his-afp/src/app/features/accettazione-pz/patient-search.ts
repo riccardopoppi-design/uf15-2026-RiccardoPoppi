@@ -101,6 +101,23 @@ export class PatientSearch {
   errorMessage = '';
   searchDone = false;
 
+  private normalizeSearchRow(row: PazienteDTO): PazienteDTO {
+    const source = row as PazienteDTO & {
+      codice_fiscale?: string;
+      data_nascita?: string;
+      indirizzo_via?: string;
+      indirizzo_civico?: string;
+    };
+
+    return {
+      ...source,
+      codiceFiscale: source.codiceFiscale ?? source.codice_fiscale ?? '',
+      dataNascita: source.dataNascita ?? source.data_nascita ?? '',
+      indirizzoVia: source.indirizzoVia ?? source.indirizzo_via ?? '',
+      indirizzoCivico: source.indirizzoCivico ?? source.indirizzo_civico ?? '',
+    };
+  }
+
   onSearch(event: Event) {
     event.preventDefault();
     this.errorMessage = '';
@@ -135,7 +152,7 @@ export class PatientSearch {
 
     this.patientManager.searchPatient(payload).subscribe({
       next: (res) => {
-        this.searchResults = res.data;
+        this.searchResults = res.data.map((row) => this.normalizeSearchRow(row));
         this.searchDone = true;
       },
       error: (err) => {

@@ -6,6 +6,8 @@ import {retrieveHealthStatusFn} from "./services/health.js";
 import {retrieveArrivalModesFn, retrievePathologiesFn, retrieveTriageColorsFn} from "./services/resources.js";
 import {
 	changeAdmissionsStatusByIDFn,
+	deleteAdmissionByIDFn,
+	deletePatientByIdFn,
 	insertNewAdmissionFn,
 	retrieveActiveAdmissionsFn,
 	retrieveAdmissionByIDFn,
@@ -72,7 +74,9 @@ app.get('/admissions/reports/discharged', authenticateTokenFn, retrieveDischarge
 app.get('/patients/search', authenticateTokenFn, searchPatientsFn);
 app.post('/admissions', authenticateTokenFn, insertNewAdmissionFn);
 app.patch('/admissions/:id/status', authenticateTokenFn, changeAdmissionsStatusByIDFn);
+app.delete('/admissions/:id', authenticateTokenFn, deleteAdmissionByIDFn);
 app.patch('/patients/:id', authenticateTokenFn, updatePatientInformationFn);
+app.delete('/patients/:id', authenticateTokenFn, deletePatientByIdFn);
 
 // 4. STAFF ENDPOINTS
 app.get('/users', authenticateTokenFn, retrieveAllStaffFn);

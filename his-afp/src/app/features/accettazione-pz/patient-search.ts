@@ -13,11 +13,11 @@ import { PazienteDTO, PatientSearchQuery } from '../../core/Pazienti/Pazienti.mo
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, InputText, Button, TableModule, Message],
   template: `
-    <div class="flex flex-col gap-4 p-4 border border-slate-200 rounded-lg bg-white shadow-sm">
+    <div class="patient-search-panel flex flex-col gap-4 p-4 rounded-lg shadow-sm">
       <div class="flex flex-row items-center justify-between gap-4">
         <div>
-          <h2 class="text-lg font-semibold">Ricerca Paziente</h2>
-          <p class="text-sm text-slate-600">Cerca per codice fiscale oppure nome, cognome e data di nascita.</p>
+          <h2 class="patient-search-title text-lg font-semibold">Ricerca Paziente</h2>
+          <p class="patient-search-subtitle text-sm">Cerca per codice fiscale oppure nome, cognome e data di nascita.</p>
         </div>
         <p-button label="Nuovo paziente" severity="secondary" (onClick)="createNewPatient()"></p-button>
       </div>
@@ -49,14 +49,14 @@ import { PazienteDTO, PatientSearchQuery } from '../../core/Pazienti/Pazienti.mo
         <p-message severity="error" text="{{ errorMessage }}"></p-message>
       </div>
 
-      <div *ngIf="searchDone && !searchResults.length" class="text-sm text-slate-700">
+      <div *ngIf="searchDone && !searchResults.length" class="patient-search-empty text-sm">
         Nessun paziente trovato con i criteri forniti.
       </div>
 
-      <div *ngIf="searchResults.length" class="overflow-x-auto">
-        <table class="min-w-full text-left border-collapse">
+      <div *ngIf="searchResults.length" class="patient-search-table-wrap overflow-x-auto">
+        <table class="patient-search-table min-w-full text-left border-collapse">
           <thead>
-            <tr class="bg-slate-100 text-slate-700">
+            <tr class="patient-search-head-row">
               <th class="px-3 py-2">Nome</th>
               <th class="px-3 py-2">Cognome</th>
               <th class="px-3 py-2">CF</th>
@@ -66,7 +66,7 @@ import { PazienteDTO, PatientSearchQuery } from '../../core/Pazienti/Pazienti.mo
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let patient of searchResults" class="border-t border-slate-200 hover:bg-slate-50">
+            <tr *ngFor="let patient of searchResults" class="patient-search-body-row border-t">
               <td class="px-3 py-2">{{ patient.nome }}</td>
               <td class="px-3 py-2">{{ patient.cognome }}</td>
               <td class="px-3 py-2">{{ patient.codiceFiscale }}</td>
@@ -81,6 +81,38 @@ import { PazienteDTO, PatientSearchQuery } from '../../core/Pazienti/Pazienti.mo
       </div>
     </div>
   `,
+  styles: [
+    `
+      .patient-search-panel {
+        background: var(--p-content-background);
+        border: 1px solid var(--p-content-border-color);
+      }
+
+      .patient-search-title,
+      .patient-search-table {
+        color: var(--p-text-color);
+      }
+
+      .patient-search-subtitle,
+      .patient-search-empty {
+        color: var(--p-text-muted-color);
+      }
+
+      .patient-search-head-row {
+        background: var(--p-content-hover-background);
+        color: var(--p-text-color);
+      }
+
+      .patient-search-body-row {
+        border-color: var(--p-content-border-color);
+        transition: background-color 0.15s ease-in-out;
+      }
+
+      .patient-search-body-row:hover {
+        background: var(--p-content-hover-background);
+      }
+    `,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PatientSearch {
@@ -128,7 +160,7 @@ export class PatientSearch {
     const dataNascitaRaw = this.searchForm.get('dataNascita')?.value?.trim();
 
     if (!cf && !nome && !cognome && !dataNascitaRaw) {
-      this.errorMessage = 'Inserisci il codice fiscale oppure almeno nome, cognome o data di nascita.';
+      this.errorMessage = 'Inserisci il codice fiscale oppure compila nome, cognome e data di nascita.';
       return;
     }
 
@@ -137,17 +169,20 @@ export class PatientSearch {
     if (cf) {
       payload.cf = cf;
     } else {
-      // include only provided fields; if date is provided, validate it
-      if (dataNascitaRaw) {
-        const dataNascita = this.normalizeDate(dataNascitaRaw);
-        if (!dataNascita) {
-          this.errorMessage = 'La data di nascita deve essere valida nel formato YYYY-MM-DD.';
-          return;
-        }
-        payload.dataNascita = dataNascita;
+      if (!nome || !cognome || !dataNascitaRaw) {
+        this.errorMessage = 'Per la ricerca anagrafica servono nome, cognome e data di nascita.';
+        return;
       }
-      if (nome) payload.nome = nome;
-      if (cognome) payload.cognome = cognome;
+
+      const dataNascita = this.normalizeDate(dataNascitaRaw);
+      if (!dataNascita) {
+        this.errorMessage = 'La data di nascita deve essere valida nel formato YYYY-MM-DD.';
+        return;
+      }
+
+      payload.nome = nome;
+      payload.cognome = cognome;
+      payload.dataNascita = dataNascita;
     }
 
     this.patientManager.searchPatient(payload).subscribe({

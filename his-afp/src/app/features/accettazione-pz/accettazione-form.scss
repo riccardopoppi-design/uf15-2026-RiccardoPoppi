@@ -1,0 +1,33 @@
+.accettazione-form-content {
+	color: var(--p-text-color);
+}
+
+.accettazione-form-help {
+	color: var(--p-text-muted-color);
+}
+
+::ng-deep .p-dialog {
+	background: var(--p-content-background);
+	color: var(--p-text-color);
+}
+
+::ng-deep .p-dialog-header,
+::ng-deep .p-dialog-content {
+	background: var(--p-content-background);
+	color: var(--p-text-color);
+}
+
+::ng-deep .p-fieldset {
+	background: var(--p-content-background);
+	border-color: var(--p-content-border-color);
+}
+
+::ng-deep .p-fieldset-legend {
+	background: var(--p-content-hover-background);
+	color: var(--p-text-color);
+	border-color: var(--p-content-border-color);
+}
+
+::ng-deep label {
+	color: var(--p-text-color);
+}

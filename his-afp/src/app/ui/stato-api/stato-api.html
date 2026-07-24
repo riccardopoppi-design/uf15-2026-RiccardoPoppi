@@ -2,26 +2,32 @@
 @let db = systemStatus.statoAPI().database;
 @let uptime = systemStatus.statoAPI().uptime;
 
-<ul>
-  <li>Service:
+<ul class="stato-api-list">
+  <li class="stato-api-item">
+    <span class="stato-api-label">Service</span>
     <p-tag
+      class="stato-api-value"
       [severity]="srv === 'UP' ? 'success' : 'danger'"
       value="{{ srv }}"
     />
   </li>
-  <li>Database:
+  <li class="stato-api-item">
+    <span class="stato-api-label">Database</span>
     <p-tag
+      class="stato-api-value"
       [severity]="db === 'CONNECTED' ? 'success' : 'danger'"
       value="{{ db }}"
     />
   </li>
-  <li>Uptime:
+  <li class="stato-api-item">
+    <span class="stato-api-label">Uptime</span>
     <p-tag
+      class="stato-api-value"
       [severity]="uptime > 0 ? 'success' : 'danger'"
       value="{{ uptime }}"
     />
   </li>
-  <li>
+  <li class="stato-api-actions">
     <p-button
       (onClick)="systemStatus.fetchStatoAPI()"
       label="Refresh"

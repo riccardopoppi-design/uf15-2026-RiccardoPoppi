@@ -1,0 +1,31 @@
+.report-title,
+.report-table {
+	color: var(--p-text-color);
+}
+
+.report-subtitle,
+.report-loading,
+.report-empty {
+	color: var(--p-text-muted-color);
+}
+
+.report-loading,
+.report-empty,
+.report-table-wrap {
+	background: var(--p-content-background);
+	border: 1px solid var(--p-content-border-color);
+}
+
+.report-head {
+	background: var(--p-content-hover-background);
+	color: var(--p-text-color);
+}
+
+.report-row {
+	border-color: var(--p-content-border-color);
+}
+
+.report-status-pill {
+	background: color-mix(in srgb, var(--p-green-500) 20%, transparent);
+	color: var(--p-green-300);
+}

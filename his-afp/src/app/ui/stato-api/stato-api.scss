@@ -1,0 +1,47 @@
+.stato-api-list {
+	display: grid;
+	gap: 0.5rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	color: var(--p-text-color);
+}
+
+.stato-api-item {
+	display: grid;
+	grid-template-columns: minmax(120px, 180px) minmax(0, 1fr);
+	align-items: center;
+	gap: 1rem;
+	padding: 0.45rem 0;
+	border-bottom: 1px solid var(--p-content-border-color);
+}
+
+.stato-api-label {
+	font-weight: 600;
+	color: var(--p-text-color);
+}
+
+.stato-api-value {
+	justify-self: start;
+}
+
+.stato-api-actions {
+	display: flex;
+	justify-content: flex-end;
+	padding-top: 0.7rem;
+}
+
+@media (max-width: 640px) {
+	.stato-api-item {
+		grid-template-columns: 1fr;
+		gap: 0.4rem;
+	}
+
+	.stato-api-actions {
+		justify-content: stretch;
+	}
+
+	.stato-api-actions p-button {
+		width: 100%;
+	}
+}

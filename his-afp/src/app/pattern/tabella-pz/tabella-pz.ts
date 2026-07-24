@@ -29,4 +29,17 @@ export class TabellaPz {
       }
     });
   }
+
+  onDischarge(admissionId: number) {
+    if (!Number.isInteger(admissionId) || admissionId <= 0) {
+      return;
+    }
+
+    const confirmed = window.confirm('Confermi la dimissione del paziente selezionato?');
+    if (!confirmed) return;
+
+    this.PatientManager.changeAdmissionStatus(admissionId, 'DIM', () => {
+      this.PatientManager.fetchPazienti();
+    });
+  }
 }

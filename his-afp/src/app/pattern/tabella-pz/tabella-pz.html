@@ -28,7 +28,11 @@
   class="flex flex-wrap flex-row gap-4 p-4"
 >
   @for (paziente of PatientManager.listaPZ(); track paziente.braccialetto) {
-    <his-card-pz [borderTop]="false" [paziente]="paziente"/>
+    <his-card-pz
+      [borderTop]="false"
+      [paziente]="paziente"
+      (dischargeRequested)="onDischarge($event)"
+    />
   } @empty {
     <h1>Nessun paziente in attesa</h1>
   }

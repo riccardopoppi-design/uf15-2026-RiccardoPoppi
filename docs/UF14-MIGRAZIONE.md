@@ -178,6 +178,77 @@ curl -s -H "X-Backend-Target: green" http://localhost:8999/api/health
 	- ripristinare Blue come default
 	- `docker compose exec gateway nginx -s reload`
 
+## Task 4 opzionale - Tunnel Database via Gateway
+
+### Obiettivo
+
+Consentire al team Data Analysis di collegarsi a PostgreSQL senza esporre direttamente la porta del container `db`.
+Il gateway diventa l'unico punto di accesso TCP anche per il traffico database.
+
+### Scelta tecnica: modulo stream NGINX
+
+Il protocollo PostgreSQL non e HTTP, quindi non puo essere configurato nei blocchi `server` del contesto `http`.
+Per questo e stato usato il contesto `stream` di NGINX.
+
+Configurazione applicata:
+1. Nuovo file principale `gateway/nginx.conf` con inclusione di:
+	- `http { include /etc/nginx/conf.d/*.conf; }`
+	- `stream { include /etc/nginx/stream.d/*.conf; }`
+2. Nuovo file `gateway/stream.conf` con tunnel TCP:
+
+```nginx
+server {
+	 listen 5432;
+	 proxy_pass db:5432;
+}
+```
+
+3. Nel `docker-compose.yml`:
+	- la porta `5432` e pubblicata solo dal servizio `gateway`
+	- il servizio `db` resta senza mapping `ports`
+
+### Implicazioni di sicurezza
+
+- Il DB non e esposto direttamente all'host.
+- Se si deve interrompere l'accesso analyst, basta rimuovere/disabilitare la regola stream sul gateway.
+- Accesso e auditing centralizzati sui log stream NGINX.
+
+### Guida test Task 4
+
+1. Riavviare i servizi per applicare la nuova config gateway:
+
+```bash
+docker compose up -d --build gateway
+```
+
+2. Verificare che solo il gateway esponga la porta 5432 verso host:
+
+```bash
+docker ps --format "table {{.Names}}\t{{.Ports}}"
+```
+
+Atteso:
+- `sio-gateway` espone `0.0.0.0:5432->5432/tcp`
+- `sio-postgres` mostra solo `5432/tcp` interno (non pubblicato)
+
+3. Verificare sintassi NGINX:
+
+```bash
+docker compose exec gateway nginx -t
+```
+
+4. Test connessione DB tramite gateway (esempio con psql):
+
+```bash
+psql -h localhost -p 5432 -U sio_user -d sio_db
+```
+
+5. Verificare log tunnel nel gateway:
+
+```bash
+docker compose exec gateway sh -c "tail -n 50 /var/log/nginx/stream-access.log"
+```
+
 ## Motivazione della migrazione
 
 Perche eseguirla:
@@ -245,5 +316,7 @@ Possibili miglioramenti futuri:
 
 - `docker-compose.yml`
 - `gateway/default.conf`
+- `gateway/nginx.conf`
+- `gateway/stream.conf`
 - `README.md`
 - `docs/UF14-MIGRAZIONE.md`

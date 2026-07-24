@@ -103,6 +103,7 @@ docker-compose up -d --build --no-deps backend
 - **Gateway (Produzione):** `http://localhost`
 - **Gateway (Test):** `http://localhost:8080`
 - **Gateway (Sviluppo):** `http://localhost:8999`
+- **Tunnel Database via Gateway:** `localhost:5432` (user: `sio_user`, password: `sio_password`, database: `sio_db`)
 
 Nota: per vincolo UF14 l'unico container che espone porte verso host e il Gateway. Backend e Database non sono
 raggiungibili direttamente dall'host.

@@ -116,6 +116,7 @@ Allinterno della cartella `docs/` sono presenti documenti dettagliati riguardant
 
 - Documentazione delle API: [docs/API.md](docs/API.md)
 - Struttura del Database: [docs/DATABASE.md](docs/DATABASE.md)
+- Relazione sviluppi frontend UF15: [docs/UF15-SVILUPPI.md](docs/UF15-SVILUPPI.md)
 
 # Contribuire
 

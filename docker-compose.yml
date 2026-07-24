@@ -14,11 +14,27 @@ services:
     networks:
       - backend-net
 
-  backend:
+  backend-blue:
     build: ./backend
-    container_name: sio-backend
+    container_name: sio-backend-blue
     #    ports:
     #      - "3000:3000"
+    environment:
+      DB_HOST: db
+      DB_USER: sio_user
+      DB_PASS: sio_password
+      DB_NAME: sio_db
+      JWT_SECRET: "chiave_segreta_super_sicura_per_il_corso_segretissimissima"
+      AUTH_ENABLED: "false"
+    depends_on:
+      - db
+    restart: always
+    networks:
+      - backend-net
+
+  backend-green:
+    build: ./backend
+    container_name: sio-backend-green
     environment:
       DB_HOST: db
       DB_USER: sio_user
@@ -82,7 +98,8 @@ services:
       - fe-sio
       - fe-prod
       - fe-test
-      - backend
+      - backend-blue
+      - backend-green
     restart: always
     networks:
       - frontend-net

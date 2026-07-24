@@ -2,10 +2,11 @@
 
 ## Obiettivo
 
-Questa relazione descrive la migrazione infrastrutturale richiesta da UF14 Task 1:
+Questa relazione descrive la migrazione infrastrutturale richiesta da UF14:
 - separazione in architettura multi-tier
 - isolamento dei frontend dal database
 - gateway come unico punto di ingresso
+- gestione opzionale Blue/Green per il backend API
 
 ## Architettura prima della migrazione
 
@@ -26,12 +27,80 @@ Sono state create due reti Docker dedicate:
 Il `gateway` e l'unico servizio ponte presente su entrambe le reti:
 - riceve traffico dall'host
 - instrada il frontend verso i container FE
-- instrada `/api` verso `backend`
+- instrada `/api` verso i backend API
 
 Misure applicate:
 - rimozione esposizione porta DB verso host (niente mapping `5432:5432`)
 - nessuna porta esposta da frontend, backend, database
 - porte esposte solo dal gateway (`80`, `8080`, `8999`)
+
+## Task 2 opzionale - Blue/Green API
+
+### Configurazione
+
+Nel file `docker-compose.yml` sono state definite due istanze backend:
+- `backend-blue` (`sio-backend-blue`)
+- `backend-green` (`sio-backend-green`)
+
+Entrambe usano lo stesso database `db` sulla rete `backend-net`.
+
+Nel file `gateway/default.conf` e stato introdotto un upstream chiamato `backend_api`.
+
+Default:
+
+```nginx
+upstream backend_api {
+	server sio-backend-blue:3000;
+	# server sio-backend-green:3000;
+}
+```
+
+Tutte le location `/api/` dei tre ambienti puntano a:
+
+```nginx
+proxy_pass http://backend_api;
+```
+
+### Procedura di switch Blue -> Green
+
+1. Avviare entrambe le istanze backend:
+
+```bash
+docker compose up -d --build backend-blue backend-green gateway
+```
+
+2. Modificare l'upstream in `gateway/default.conf` sostituendo:
+
+```nginx
+server sio-backend-blue:3000;
+```
+
+con:
+
+```nginx
+server sio-backend-green:3000;
+```
+
+3. Ricaricare il gateway senza down completo:
+
+```bash
+docker compose restart gateway
+```
+
+### Procedura di rollback Green -> Blue
+
+Rollback istantaneo:
+1. ripristinare `server sio-backend-blue:3000;` nell'upstream
+2. `docker compose restart gateway`
+
+Il frontend continua a funzionare perche l'endpoint esterno non cambia: cambia solo il target interno del proxy.
+
+### Riflessione sul dato condiviso
+
+Se la versione Green scrive dati nel DB e poi facciamo rollback a Blue:
+- il dato rimane nel database, perche il DB e condiviso
+- il rollback cambia solo chi serve le richieste API, non annulla transazioni gia commitate
+- servono quindi compatibilita schema/migrazione e strategie di rollback applicativo (feature flag, migrazioni backward-compatible)
 
 ## Motivazione della migrazione
 
@@ -99,5 +168,6 @@ Possibili miglioramenti futuri:
 ## File modificati per la migrazione
 
 - `docker-compose.yml`
+- `gateway/default.conf`
 - `README.md`
 - `docs/UF14-MIGRAZIONE.md`

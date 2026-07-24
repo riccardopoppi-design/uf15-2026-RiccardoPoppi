@@ -1,6 +1,13 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { Observable } from 'rxjs';
-import { PatientAdmission, PatientAdmissionRes, Paziente, PazienteDTO, PatientSearchQuery } from './Pazienti.model';
+import {
+  DischargedAdmissionReport,
+  PatientAdmission,
+  PatientAdmissionRes,
+  Paziente,
+  PazienteDTO,
+  PatientSearchQuery,
+} from './Pazienti.model';
 import { HttpClient } from '@angular/common/http';
 import { APIResponse } from '../models/APIResponse.model';
 import { environment } from '../../../environments/environment';
@@ -91,6 +98,30 @@ export class PatientManager {
       });
   }
 
+  public changeAdmissionStatus(
+    admissionId: number,
+    nuovoStato: 'ATT' | 'VIS' | 'OBI' | 'RIC' | 'DIM',
+    onSuccess?: () => void,
+  ) {
+    this.#http
+      .patch<APIResponse<{ id: number; stato: string; dataOraDimissione?: string }>>(
+        `${environment.apiUrl}/admissions/${admissionId}/status`,
+        { nuovoStato },
+      )
+      .subscribe({
+        next: () => {
+          if (onSuccess) {
+            onSuccess();
+          } else {
+            this.fetchPazienti();
+          }
+        },
+        error: (err) => {
+          console.error("Errore durante l'aggiornamento dello stato accesso:", err);
+        },
+      });
+  }
+
   public deletePatient(patientOrAdmissionId: number, onSuccess?: () => void) {
     this.#http.delete<APIResponse<{ patient: { id: number; nome: string; cognome: string }; deletedAdmissions: number }>>(
       `${environment.apiUrl}/patients/${patientOrAdmissionId}`,
@@ -137,6 +168,12 @@ export class PatientManager {
     return this.#http.get<APIResponse<PazienteDTO[]>>(`${environment.apiUrl}/patients/search`, {
       params,
     });
+  }
+
+  public getDischargedAdmissions(): Observable<APIResponse<DischargedAdmissionReport[]>> {
+    return this.#http.get<APIResponse<DischargedAdmissionReport[]>>(
+      `${environment.apiUrl}/admissions/reports/discharged`,
+    );
   }
 
   public mapPazienteDTOToPaziente(pz: PazienteDTO): Paziente {

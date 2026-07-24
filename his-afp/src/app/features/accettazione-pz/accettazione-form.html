@@ -9,8 +9,8 @@
   (onHide)="onDialogHide()"
   header="Modulo accettazione paziente"
 >
-  <div class="flex flex-col gap-4">
-    <p class="text-sm text-slate-600">Compila i dati sanitari e invia l'accesso.</p>
+  <div class="accettazione-form-content flex flex-col gap-4">
+    <p class="accettazione-form-help text-sm">Compila i dati sanitari e invia l'accesso.</p>
 
     <form (ngSubmit)="onSubmit()" [formGroup]="paziente" class="grid grid-cols-1 gap-6">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -258,7 +258,7 @@
         <p-message severity="error" [text]="saveError()"></p-message>
       }
 
-      <div class="flex flex-row gap-4 pt-3">
+      <div class="accettazione-form-actions flex flex-row gap-4 pt-3">
         <p-button label="Invia" type="submit" />
         <p-button type="button" (onClick)="onReset()" label="Reset" severity="warn" variant="outlined" />
         <p-button type="button" (onClick)="onClose()" label="Chiudi" severity="secondary" variant="outlined" />

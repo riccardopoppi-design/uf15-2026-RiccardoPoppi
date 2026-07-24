@@ -68,3 +68,12 @@ export interface PatientSearchQuery {
   cognome?: string;
   dataNascita?: string;
 }
+
+export interface DischargedAdmissionReport {
+  braccialetto: string;
+  stato: 'DIM';
+  nome: string;
+  cognome: string;
+  dataOraIngresso: string;
+  dataOraDimissione: string;
+}

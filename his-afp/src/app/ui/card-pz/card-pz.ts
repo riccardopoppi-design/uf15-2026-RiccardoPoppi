@@ -1,4 +1,4 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, inject, input, output } from '@angular/core';
 import { CardModule } from 'primeng/card';
 import { Button } from 'primeng/button';
 import { Paziente } from '../../core/Pazienti/Pazienti.model';
@@ -13,10 +13,15 @@ import { Router } from '@angular/router';
 export class CardPz {
   paziente = input.required<Paziente>();
   borderTop = input.required<boolean>();
+  dischargeRequested = output<number>();
   readonly #router = inject(Router);
 
   public navigateToSchedaPaziente() {
     this.#router.navigate([`/modifica-pz/${this.paziente().id}`]);
+  }
+
+  public requestDischarge() {
+    this.dischargeRequested.emit(Number(this.paziente().id));
   }
 
   setBorder() {

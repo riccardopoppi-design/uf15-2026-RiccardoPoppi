@@ -1,5 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { PatientAdmission, PatientAdmissionRes, Paziente, PazienteDTO } from './Pazienti.model';
+import { Observable } from 'rxjs';
+import { PatientAdmission, PatientAdmissionRes, Paziente, PazienteDTO, PatientSearchQuery } from './Pazienti.model';
 import { HttpClient } from '@angular/common/http';
 import { APIResponse } from '../models/APIResponse.model';
 import { environment } from '../../../environments/environment';
@@ -46,30 +47,96 @@ export class PatientManager {
     });
   }
 
-  public admitPatient(pz: PatientAdmission) {
+  public admitPatient(
+    pz: PatientAdmission,
+    onSuccess?: () => void,
+    onError?: (errorMessage: string) => void,
+  ) {
     this.#http
       .post<APIResponse<PatientAdmissionRes>>(`${environment.apiUrl}/admissions`, pz)
       .subscribe({
         next: (res) => {
-          this.#router.navigate([`/modifica-pz/${res.data.id}`]);
+          if (onSuccess) {
+            try {
+              onSuccess();
+            } catch (e) {
+              console.error('onSuccess callback error', e);
+            }
+          }
         },
         error: (err) => {
           console.error("Errore durante l'ammissione del paziente:", err);
+          if (onError) {
+            const message = err?.error?.message ?? "Errore durante l'ammissione del paziente.";
+            onError(message);
+          }
         },
       });
   }
 
-  public updatePatientInfo(pzId: number, residenza: Pick<PatientAdmission, 'residenza'>) {
+  public updatePatientInfo(patientOrAdmissionId: number, residenza: PatientAdmission['residenza'], onSuccess?: () => void) {
     this.#http
-      .patch<APIResponse<PatientAdmissionRes>>(`${environment.apiUrl}/patients/${pzId}`, residenza)
+      .patch<APIResponse<PatientAdmissionRes>>(`${environment.apiUrl}/patients/${patientOrAdmissionId}`, residenza)
       .subscribe({
         next: (res) => {
-          this.#router.navigate([`/lista-pz`]);
+          if (onSuccess) {
+            onSuccess();
+          } else {
+            this.#router.navigate([`/lista-pz`]);
+          }
         },
         error: (err) => {
           console.error("Errore durante l'aggiornamento delle informazioni del paziente:", err);
         },
       });
+  }
+
+  public deletePatient(patientOrAdmissionId: number, onSuccess?: () => void) {
+    this.#http.delete<APIResponse<{ patient: { id: number; nome: string; cognome: string }; deletedAdmissions: number }>>(
+      `${environment.apiUrl}/patients/${patientOrAdmissionId}`,
+    ).subscribe({
+      next: () => {
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          this.#router.navigate([`/lista-pz`]);
+        }
+      },
+      error: (err) => {
+        console.error('Errore durante la cancellazione del paziente:', err);
+      },
+    });
+  }
+
+  public deleteAdmission(admissionId: number, onSuccess?: () => void) {
+    this.#http
+      .delete<APIResponse<{ id: number; patientId: number; braccialetto: string }>>(
+        `${environment.apiUrl}/admissions/${admissionId}`,
+      )
+      .subscribe({
+        next: () => {
+          if (onSuccess) {
+            onSuccess();
+          } else {
+            this.#router.navigate([`/lista-pz`]);
+          }
+        },
+        error: (err) => {
+          console.error("Errore durante l'eliminazione dell'accesso:", err);
+        },
+      });
+  }
+
+  public searchPatient(query: PatientSearchQuery): Observable<APIResponse<PazienteDTO[]>> {
+    const params: Record<string, string> = {};
+    if (query['cf']) params['cf'] = query['cf'] as string;
+    if (query['nome']) params['nome'] = query['nome'] as string;
+    if (query['cognome']) params['cognome'] = query['cognome'] as string;
+    if (query['dataNascita']) params['data_nascita'] = query['dataNascita'] as string;
+
+    return this.#http.get<APIResponse<PazienteDTO[]>>(`${environment.apiUrl}/patients/search`, {
+      params,
+    });
   }
 
   public mapPazienteDTOToPaziente(pz: PazienteDTO): Paziente {

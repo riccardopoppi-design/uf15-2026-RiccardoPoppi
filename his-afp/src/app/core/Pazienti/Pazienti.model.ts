@@ -11,6 +11,7 @@ export interface Paziente {
 
 export interface PazienteDTO {
   id: number;
+  patientId?: number;
   braccialetto: string;
   dataOraIngresso: string;
   stato: string;
@@ -59,4 +60,11 @@ export interface PatientAdmission {
 export interface PatientAdmissionRes {
   id: number;
   braccialetto: string;
+}
+
+export interface PatientSearchQuery {
+  cf?: string;
+  nome?: string;
+  cognome?: string;
+  dataNascita?: string;
 }

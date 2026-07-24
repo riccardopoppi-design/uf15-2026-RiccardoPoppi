@@ -59,11 +59,12 @@ export const retrieveActiveAdmissionsFn = catchAsync(async (req, res) => {
 export const retrieveAdmissionByIDFn = catchAsync(async (req, res, next) => {
 	const {id} = req.params;
 	const query = `
-        SELECT a.id,
+		 SELECT a.id,
                a.braccialetto,
                a.data_ora_ingresso   AS "dataOraIngresso",
                a.stato,
                a.note_triage         AS "noteTriage",
+			 p.id                  AS "patientId",
                p.nome,
                p.cognome,
                p.data_nascita        AS "dataNascita",
@@ -111,6 +112,13 @@ export const insertNewAdmissionFn = catchAsync(async (req, res, next) => {
 	const {
 		patologia, codiceColore, modArrivo, noteTriage // Dati Accesso (Notare i suffix 'Code')
 	} = req.body.sanitaria;
+	// Dati residenza (opzionali)
+	const {
+		via: res_via = null,
+		civico: res_civico = null,
+		comune: res_comune = null,
+		provincia: res_provincia = null,
+	} = req.body.residenza || {};
 
 	if (!nome || !cognome || !dataNascita || !sesso || !codiceFiscale) {
 		return next(new AppError("Dati anagrafici incompleti", 400));
@@ -123,23 +131,28 @@ export const insertNewAdmissionFn = catchAsync(async (req, res, next) => {
 
 	await client.query('BEGIN');
 
-	// 1. Upsert Paziente
+	// 1. Upsert Paziente, includendo anche i campi di residenza quando presenti
 	let patientRes = await client.query(
-		`INSERT INTO patients (nome, cognome, data_nascita, sex, codice_fiscale)
-         VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (codice_fiscale) DO UPDATE SET nome    = EXCLUDED.nome,
-                                                    cognome = EXCLUDED.cognome
-         RETURNING id`,
-		[nome, cognome, dataNascita, sesso, codiceFiscale]
+		`INSERT INTO patients (nome, cognome, data_nascita, sex, codice_fiscale, indirizzo_via, indirizzo_civico, comune, provincia)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		 ON CONFLICT (codice_fiscale) DO UPDATE SET
+			 nome = EXCLUDED.nome,
+			 cognome = EXCLUDED.cognome,
+			 indirizzo_via = COALESCE(EXCLUDED.indirizzo_via, patients.indirizzo_via),
+			 indirizzo_civico = COALESCE(EXCLUDED.indirizzo_civico, patients.indirizzo_civico),
+			 comune = COALESCE(EXCLUDED.comune, patients.comune),
+			 provincia = COALESCE(EXCLUDED.provincia, patients.provincia)
+		 RETURNING id`,
+		[nome, cognome, dataNascita, sesso, codiceFiscale, res_via, res_civico, res_comune, res_provincia]
 	);
 	const patientId = patientRes.rows[0].id;
 
 	// 2. Generazione Braccialetto
 	const year = new Date().getFullYear();
-	const countRes = await client.query(`SELECT COUNT(*)
+	const countRes = await client.query(`SELECT COALESCE(MAX(CAST(split_part(braccialetto, '-', 2) AS INTEGER)), 0) AS max_num
                                          FROM admissions
                                          WHERE braccialetto LIKE $1`, [`${year}-%`]);
-	const nextNum = Number.parseInt(countRes.rows[0].count) + 1;
+	const nextNum = Number.parseInt(countRes.rows[0].max_num) + 1;
 	const braccialetto = `${year}-${String(nextNum).padStart(4, '0')}`;
 
 	// 3. Insert Accesso
@@ -219,6 +232,34 @@ export const changeAdmissionsStatusByIDFn = catchAsync(async (req, res, next) =>
 	});
 });
 
+	/**
+	 * DELETE /admissions/:id
+	 * Elimina un singolo accesso.
+	 */
+	export const deleteAdmissionByIDFn = catchAsync(async (req, res, next) => {
+		const {id} = req.params;
+		const parsedId = Number(id);
+
+		if (!Number.isInteger(parsedId) || parsedId <= 0) {
+			return next(new AppError("ID accesso non valido", 400));
+		}
+
+		const result = await pool.query(
+			`DELETE FROM admissions WHERE id = $1 RETURNING id, patient_id AS "patientId", braccialetto`,
+			[parsedId]
+		);
+
+		if (result.rowCount === 0) {
+			return next(new AppError("Accesso non trovato", 404));
+		}
+
+		res.status(200).json({
+			status: 'success',
+			message: 'Accesso eliminato con successo.',
+			data: result.rows[0]
+		});
+	});
+
 /**
  * GET /admissions/reports/discharged
  * Recupera i pazienti dimessi nelle ultime 24 ore.
@@ -259,10 +300,11 @@ export const updatePatientInformationFn = catchAsync(async (req, res, next) => {
 	} = req.body;
 
 	// Validazione di base per assicurarsi che almeno un campo sia fornito
-	if (!via && !via && !comune && !provincia) {
+	if (!via && !civico && !comune && !provincia) {
 		return next(new AppError("Nessun dato da aggiornare fornito.", 400));
 	}
 
+	// Proviamo prima con un patient ID diretto
 	const result = await pool.query(
 		`UPDATE patients
          SET indirizzo_via    = $1,
@@ -275,7 +317,30 @@ export const updatePatientInformationFn = catchAsync(async (req, res, next) => {
 	);
 
 	if (result.rows.length === 0) {
-		return next(new AppError("Paziente non trovato con questo ID", 404));
+		// Se non troviamo il patient, controlliamo se l'ID è in realtà un admission ID
+		const fallbackResult = await pool.query(
+			`UPDATE patients p
+             SET indirizzo_via    = $1,
+                 indirizzo_civico = $2,
+                 comune           = $3,
+                 provincia        = $4
+             FROM admissions a
+             WHERE a.patient_id = p.id
+               AND a.id = $5
+             RETURNING p.id, p.nome, p.cognome, p.indirizzo_via, p.indirizzo_civico, p.comune, p.provincia`,
+			[via, civico, comune, provincia, id]
+		);
+
+		if (fallbackResult.rows.length === 0) {
+			return next(new AppError("Paziente non trovato con questo ID", 404));
+		}
+
+		res.status(200).json({
+			status: 'success',
+			message: 'Dati del paziente aggiornati con successo.',
+			data: fallbackResult.rows[0]
+		});
+		return;
 	}
 
 	res.status(200).json({
@@ -285,38 +350,122 @@ export const updatePatientInformationFn = catchAsync(async (req, res, next) => {
 	});
 });
 
+/**
+ * DELETE /patients/:id
+ * Elimina un paziente e tutti i suoi accessi.
+ * Supporta sia patientId diretto sia admissionId come fallback.
+ */
+export const deletePatientByIdFn = catchAsync(async (req, res, next) => {
+	const {id} = req.params;
+	const parsedId = Number(id);
+
+	if (!Number.isInteger(parsedId) || parsedId <= 0) {
+		return next(new AppError("ID paziente non valido", 400));
+	}
+
+	const client = await pool.connect();
+
+	try {
+		await client.query('BEGIN');
+
+		let patientId = parsedId;
+		const directPatient = await client.query(
+			`SELECT id FROM patients WHERE id = $1`,
+			[parsedId]
+		);
+
+		if (directPatient.rowCount === 0) {
+			const fallbackFromAdmission = await client.query(
+				`SELECT p.id
+                 FROM admissions a
+                          JOIN patients p ON a.patient_id = p.id
+                 WHERE a.id = $1`,
+				[parsedId]
+			);
+
+			if (fallbackFromAdmission.rowCount === 0) {
+				await client.query('ROLLBACK');
+				return next(new AppError("Paziente non trovato con questo ID", 404));
+			}
+
+			patientId = fallbackFromAdmission.rows[0].id;
+		}
+
+		const deletedAdmissions = await client.query(
+			`DELETE FROM admissions WHERE patient_id = $1`,
+			[patientId]
+		);
+
+		const deletedPatient = await client.query(
+			`DELETE FROM patients WHERE id = $1 RETURNING id, nome, cognome`,
+			[patientId]
+		);
+
+		if (deletedPatient.rowCount === 0) {
+			await client.query('ROLLBACK');
+			return next(new AppError("Paziente non trovato con questo ID", 404));
+		}
+
+		await client.query('COMMIT');
+
+		res.status(200).json({
+			status: 'success',
+			message: 'Paziente eliminato con successo.',
+			data: {
+				patient: deletedPatient.rows[0],
+				deletedAdmissions: deletedAdmissions.rowCount
+			}
+		});
+	} catch (err) {
+		await client.query('ROLLBACK');
+		throw err;
+	} finally {
+		client.release();
+	}
+});
+
 // GET /patients/search - Ricerca avanzata (Fuzzy)
 export const searchPatientsFn = catchAsync(async (req, res) => {
-	const {cf, nome, cognome, data_nascita} = req.query;
-	let query = `SELECT *
-                 FROM patients`;
+	const { cf, nome, cognome, data_nascita } = req.query;
+	let query = `SELECT * FROM patients`;
 	const params = [];
+	const clauses = [];
+
 	logger.info(`Ricerca pazienti con parametri: cf=${cf}, nome=${nome}, cognome=${cognome}, data_nascita=${data_nascita}`);
 
 	if (!cf && !nome && !cognome && !data_nascita) {
-		return res.status(400).json({status: 'fail', message: "Almeno un parametro di ricerca è richiesto"});
-	}
-
-	if (cf && (nome || cognome || data_nascita)) {
-		logger.warn("Ricerca con codice fiscale e altri parametri. Il codice fiscale sovrascriverà gli altri filtri.");
+		return res.status(400).json({ status: 'fail', message: "Almeno un parametro di ricerca è richiesto" });
 	}
 
 	if (cf) {
-		query += ` WHERE codice_fiscale = $${params.length + 1}`;
-		params.push(cf.toUpperCase());
+		// codice fiscale = ricerca esatta
+		clauses.push(`codice_fiscale = $${params.length + 1}`);
+		params.push(String(cf).toUpperCase());
 	} else {
-		if (!nome || !cognome || !data_nascita) {
-			return res.status(400).json({
-				status: 'fail',
-				message: "Senza codice fiscale, nome, cognome e data di nascita sono obbligatori."
-			});
+		// costruisco clausole dinamiche per nome/cognome/data
+		if (nome) {
+			clauses.push(`nome ILIKE $${params.length + 1}`);
+			params.push(`%${String(nome)}%`);
 		}
-		query += ` WHERE nome ILIKE $${params.length + 1} AND cognome ILIKE $${params.length + 2} AND data_nascita = $${params.length + 3}`;
-		params.push(nome.toUpperCase(), cognome.toUpperCase(), data_nascita);
+		if (cognome) {
+			clauses.push(`cognome ILIKE $${params.length + 1}`);
+			params.push(`%${String(cognome)}%`);
+		}
+		if (data_nascita) {
+			clauses.push(`data_nascita = $${params.length + 1}`);
+			params.push(String(data_nascita));
+		}
+		if (clauses.length === 0) {
+			return res.status(400).json({ status: 'fail', message: "Specificare almeno nome o cognome o data di nascita." });
+		}
+	}
+
+	if (clauses.length > 0) {
+		query += ' WHERE ' + clauses.join(' AND ');
 	}
 
 	logger.info(`Esecuzione query di ricerca pazienti: ${query} con parametri ${JSON.stringify(params)}`);
 
 	const result = await pool.query(query, params);
-	res.status(200).json({status: 'success', results: result.rowCount, data: result.rows});
+	res.status(200).json({ status: 'success', results: result.rowCount, data: result.rows });
 });

@@ -72,7 +72,7 @@ his-afp
 3. Spostarsi nella cartella del progetto: `cd his-afp`
 4. Creare un nuovo branch per le modifiche: `git checkout -b uf15-2026/nome-cognome`
 5. Avviare i container Docker: `docker-compose up -d --build`
-6. Accedere al backend API su `http://localhost:3000`
+6. Accedere all'applicazione passando dal Gateway (`http://localhost`, `http://localhost:8080`, `http://localhost:8999`)
 
 # Avvio dei servizi
 
@@ -100,8 +100,12 @@ docker-compose up -d --build --no-deps backend
 
 # Accessi
 
-- **Backend API:** `http://localhost:3000`
-- **Database PostgreSQL:** `localhost:5432` (user: `sio_user`, password: `sio_password`, database: `sio_db`)
+- **Gateway (Produzione):** `http://localhost`
+- **Gateway (Test):** `http://localhost:8080`
+- **Gateway (Sviluppo):** `http://localhost:8999`
+
+Nota: per vincolo UF14 l'unico container che espone porte verso host e il Gateway. Backend e Database non sono
+raggiungibili direttamente dall'host.
 
 # Test delle API
 
@@ -116,6 +120,7 @@ Allinterno della cartella `docs/` sono presenti documenti dettagliati riguardant
 
 - Documentazione delle API: [docs/API.md](docs/API.md)
 - Struttura del Database: [docs/DATABASE.md](docs/DATABASE.md)
+- Migrazione architetturale UF14: [docs/UF14-MIGRAZIONE.md](docs/UF14-MIGRAZIONE.md)
 
 # Contribuire
 

@@ -185,6 +185,12 @@ curl -s -H "X-Backend-Target: green" http://localhost:8999/api/health
 Consentire al team Data Analysis di collegarsi a PostgreSQL senza esporre direttamente la porta del container `db`.
 Il gateway diventa l'unico punto di accesso TCP anche per il traffico database.
 
+Scenario d'uso previsto:
+
+1. analyst e sviluppatori collegano DBeaver/TablePlus verso `localhost:5432`;
+2. il gateway inoltra il traffico TCP a `db:5432` nella rete protetta;
+3. il container database non espone porte host direttamente.
+
 ### Scelta tecnica: modulo stream NGINX
 
 Il protocollo PostgreSQL non e HTTP, quindi non puo essere configurato nei blocchi `server` del contesto `http`.
@@ -207,11 +213,30 @@ server {
 	- la porta `5432` e pubblicata solo dal servizio `gateway`
 	- il servizio `db` resta senza mapping `ports`
 
+Motivazione tecnica:
+
+1. PostgreSQL parla protocollo TCP, non HTTP;
+2. i blocchi `server {}` sotto `http` non sono adatti al traffico DB;
+3. `stream` permette un forwarding trasparente layer 4, indipendente dal payload SQL.
+
 ### Implicazioni di sicurezza
 
 - Il DB non e esposto direttamente all'host.
 - Se si deve interrompere l'accesso analyst, basta rimuovere/disabilitare la regola stream sul gateway.
 - Accesso e auditing centralizzati sui log stream NGINX.
+
+Controllo accesso centralizzato:
+
+1. disattivazione tunnel: commentare o rimuovere `gateway/stream.conf` e ricaricare NGINX;
+2. riattivazione tunnel: ripristinare file regola e ricaricare NGINX;
+3. nessun riavvio DB necessario.
+
+Comandi esempio:
+
+```bash
+docker compose exec gateway nginx -t
+docker compose exec gateway nginx -s reload
+```
 
 ### Guida test Task 4
 
@@ -243,11 +268,46 @@ docker compose exec gateway nginx -t
 psql -h localhost -p 5432 -U sio_user -d sio_db
 ```
 
+Su PowerShell (se `psql` non e nel PATH):
+
+```powershell
+"select 1;" | docker compose exec -T db psql -U sio_user -d sio_db
+```
+
+Oppure con client desktop (DBeaver/TablePlus):
+
+1. Host: `localhost`
+2. Port: `5432`
+3. Database: `sio_db`
+4. User: `sio_user`
+5. Password: `sio_password`
+
 5. Verificare log tunnel nel gateway:
 
 ```bash
 docker compose exec gateway sh -c "tail -n 50 /var/log/nginx/stream-access.log"
 ```
+
+### Criteri di accettazione Task 4
+
+La task e considerata completata quando tutti i seguenti punti sono veri:
+
+1. il servizio `db` non ha `ports` esposti nel compose;
+2. il servizio `gateway` espone `5432:5432`;
+3. `nginx -t` e valido con contesto `stream` attivo;
+4. una connessione client su `localhost:5432` raggiunge il DB;
+5. il traffico compare nei log stream del gateway.
+
+### Troubleshooting rapido
+
+1. errore connessione client su 5432:
+	- verificare `docker compose ps` e presenza porta 5432 sul gateway
+	- verificare `docker compose exec gateway nginx -t`
+2. errore DNS `db` nel gateway:
+	- verificare che gateway e db condividano `backend-net`
+3. log stream vuoti:
+	- generare una nuova connessione DB dopo il `tail`
+	- verificare percorso `/var/log/nginx/stream-access.log`
 
 ## Motivazione della migrazione
 
@@ -273,7 +333,7 @@ docker ps --format "table {{.Names}}\t{{.Ports}}"
 
 Risultato atteso:
 - `sio-gateway` con porte pubblicate
-- `sio-backend`, `sio-postgres`, `sio-fe-*` senza porte pubblicate verso host
+- `sio-backend-blue`, `sio-backend-green`, `sio-postgres`, `sio-fe-*` senza porte pubblicate verso host
 
 ### 3) Verifica isolamento DNS da frontend verso DB
 
